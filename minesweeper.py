@@ -4,10 +4,13 @@ import pygame
 SCREEN_HEIGHT = 600
 SCREEN_WIDTH = 900
 
-BLACK = (255, 255, 255)
-WHITE = (0, 0, 0)
-GRAY = (230, 230, 230)
-BACKGROUND_COLOR = (220,220,220)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GRAY = (180, 180, 180)
+
+BORDER_COLOR = (170, 170, 170)
+NOT_PRESSED_COLOR = (210, 210, 210)
+BACKGROUND_COLOR = (150,150,150)
 
 # Variables that effect difficulty of the game
 HEIGHT = 16
@@ -16,6 +19,8 @@ BOMBS = 99
 
 GAMEPLAY_SCREEN_HEIGHT = HEIGHT * 24
 GAMEPLAY_SCREEN_WIDTH = WIDTH * 24
+# GAMEPLAY_SCREEN_HEIGHT = SCREEN_HEIGHT
+# GAMEPLAY_SCREEN_WIDTH = SCREEN_WIDTH
 
 TILE_HEIGHT = GAMEPLAY_SCREEN_HEIGHT // HEIGHT
 TILE_WIDTH = GAMEPLAY_SCREEN_WIDTH // WIDTH
@@ -33,6 +38,7 @@ class Tile():
         self.width = width
         self.height = height
         self.isbomb = isbomb
+        self.pressed = False
         if not self.isbomb:
             self.adjacent = adjacent
             self.num_image = number_font.render(str(self.adjacent), True, WHITE, BACKGROUND_COLOR)
@@ -112,11 +118,23 @@ class MineSweeper():
         for x in range(self.width):
             for y in range(self.height):
                 tile = self.board[x][y]
-                pygame.draw.rect(screen, (255,255,0), tile.rect, 1)
-                if not tile.isbomb:
-                    screen.blit(tile.num_image, (tile.rect.center))
-       
-                
+                if not tile.pressed:
+                    pygame.draw.rect(screen, (NOT_PRESSED_COLOR), tile.rect)
+                    pygame.draw.rect(screen, (BORDER_COLOR), tile.rect, 1)
+                else:
+                    pygame.draw.rect(screen, BORDER_COLOR, tile.rect, 1)
+                    if not tile.isbomb:
+                        screen.blit(tile.num_image, (tile.x, tile.y))
+                        
+    def tile_click(self, m_coordinates):
+        x_m, y_m = m_coordinates
+        for x in range(self.width):
+            for y in range(self.height):
+                tile = self.board[x][y]
+                if tile.rect.collidepoint(x_m, y_m):
+                    tile.pressed = True 
+                    return
+           
 if __name__ == "__main__":
     # set up board
     game = MineSweeper()
@@ -134,9 +152,12 @@ if __name__ == "__main__":
             
             # keyboard presses
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit
-                    exit()
+                pass
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                game.tile_click(pygame.mouse.get_pos())
+                
+                # BACKGROUND_COLOR = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                
         
         screen.fill(BACKGROUND_COLOR)
         
