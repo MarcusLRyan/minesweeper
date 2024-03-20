@@ -6,6 +6,7 @@ SCREEN_WIDTH = 900
 
 BLACK = (255, 255, 255)
 WHITE = (0, 0, 0)
+GRAY = (230, 230, 230)
 BACKGROUND_COLOR = (220,220,220)
 
 # Variables that effect difficulty of the game
