@@ -19,17 +19,20 @@ BOMBS = 99
 
 GAMEPLAY_SCREEN_HEIGHT = HEIGHT * 24
 GAMEPLAY_SCREEN_WIDTH = WIDTH * 24
-# GAMEPLAY_SCREEN_HEIGHT = SCREEN_HEIGHT
-# GAMEPLAY_SCREEN_WIDTH = SCREEN_WIDTH
 
 TILE_HEIGHT = GAMEPLAY_SCREEN_HEIGHT // HEIGHT
 TILE_WIDTH = GAMEPLAY_SCREEN_WIDTH // WIDTH
+
+
 
 pygame.init()
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
 number_font = pygame.font.SysFont(None, 20)
+
+flag_image = pygame.image.load("flag.png").convert_alpha()
+bomb_image = pygame.image.load("bomb.png").convert_alpha()
 
 class Tile():
     def __init__(self, x, y, width, height, isbomb:bool, adjacent):
@@ -42,7 +45,10 @@ class Tile():
         if not self.isbomb:
             self.adjacent = adjacent
             self.num_image = number_font.render(str(self.adjacent), True, WHITE, BACKGROUND_COLOR)
+        else:
+            self.bomb_image = bomb_image
         self.rect = pygame.Rect(x, y, width, height)
+        self.placeholder = False
         
 # class for the game itself
 class MineSweeper():
@@ -119,22 +125,71 @@ class MineSweeper():
             for y in range(self.height):
                 tile = self.board[x][y]
                 if not tile.pressed:
-                    pygame.draw.rect(screen, (NOT_PRESSED_COLOR), tile.rect)
-                    pygame.draw.rect(screen, (BORDER_COLOR), tile.rect, 1)
+                    if not tile.placeholder:
+                        pygame.draw.rect(screen, (NOT_PRESSED_COLOR), tile.rect)
+                    else:
+                        screen.blit(flag_image, (tile.x, tile.y))
                 else:
-                    pygame.draw.rect(screen, BORDER_COLOR, tile.rect, 1)
                     if not tile.isbomb:
                         screen.blit(tile.num_image, (tile.x, tile.y))
+                    else:
+                        screen.blit(tile.bomb_image, (tile.x, tile.y))
                         
-    def tile_click(self, m_coordinates):
+                pygame.draw.rect(screen, BORDER_COLOR, tile.rect, 1)
+                        
+    def tile_click(self, m_coordinates:tuple):
+        # maybe expand this to spread out to
+        # all adjacent tiles that dont border bombs
+        # should use a searching algorithm
         x_m, y_m = m_coordinates
         for x in range(self.width):
             for y in range(self.height):
                 tile = self.board[x][y]
                 if tile.rect.collidepoint(x_m, y_m):
-                    tile.pressed = True 
+                    tile.pressed = True
+                    # or call self.expand() here
+                    if not tile.isbomb and tile.adjacent == 0:
+                        self.expand(x, y)
                     return
-           
+    
+    def expand(self, x, y):
+        # return
+        queue = [(x, y)]
+        visited = set()
+        while len(queue) > 0:
+            x, y = queue.pop(0)
+            visited.add((x, y))
+            self.board[x][y].pressed = True
+            
+            for x, y in self.neighbours(x, y):
+                if (x, y) not in visited and not self.board[x][y].isbomb and self.board[x][y].adjacent == 0:
+                    queue.append((x, y))
+                else:
+                    self.board[x][y].pressed = True
+    
+    def neighbours(self, x, y):
+        indices = [
+            (x - 1, y - 1),
+            (x - 1, y),
+            (x - 1, y + 1),
+            (x, y - 1),
+            (x, y + 1),
+            (x + 1, y - 1),
+            (x + 1, y),
+            (x + 1, y + 1)
+            ]
+        return [(x, y) for x, y in indices if self.is_valid_pos(x, y)]
+    
+    def bomb_filler(self, m_coordinates:tuple):
+        x_m, y_m = m_coordinates
+        for x in range(self.width):
+            for y in range(self.height):
+                tile = self.board[x][y]
+                if tile.rect.collidepoint(x_m, y_m):
+                    tile.placeholder = True
+                    return
+        
+
 if __name__ == "__main__":
     # set up board
     game = MineSweeper()
@@ -153,11 +208,17 @@ if __name__ == "__main__":
             # keyboard presses
             if event.type == pygame.KEYDOWN:
                 pass
+                    
             if event.type == pygame.MOUSEBUTTONDOWN:
-                game.tile_click(pygame.mouse.get_pos())
                 
-                # BACKGROUND_COLOR = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-                
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_LCTRL]:
+                    if event.button == 1:
+                        # place bomb
+                        game.bomb_filler(pygame.mouse.get_pos())
+                        pass
+                else:
+                    game.tile_click(pygame.mouse.get_pos())                
         
         screen.fill(BACKGROUND_COLOR)
         
